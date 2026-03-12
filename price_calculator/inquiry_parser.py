@@ -24,6 +24,7 @@ Usage
 """
 
 import os
+import re as _re
 import json
 from pathlib import Path
 
@@ -264,8 +265,6 @@ def parse_inquiry_file(file_path: str) -> list[dict]:
     ----------
     file_path : str
         Path to the inquiry file.
-    expand_qty : bool
-        Passed through to parse_inquiry_text.
 
     Returns
     -------
@@ -275,6 +274,212 @@ def parse_inquiry_file(file_path: str) -> list[dict]:
     raw_text = _extract_text(file_path)
     return parse_inquiry_text(raw_text)
 
+
+# -----------------------------------------------------------------------
+# NON-US SYSTEM PROMPT
+# -----------------------------------------------------------------------
+
+_SYSTEM_PROMPT_NON_US = """
+You are a piping materials expert. Convert raw RFQ (Request for Quotation)
+text into a structured JSON array for a pricing system.
+
+The inquiry uses metric / non-US sizing: NB or DN numbers for pipe bore,
+and lengths in mm. Do NOT convert — output the NB/DN values and mm lengths directly.
+
+## Output format
+Return ONLY a valid JSON array — no markdown fences, no explanation:
+[
+  {"desc": "<item_type>", "nb_1": <int>, "nb_2": <int_or_null>, "length_mm": <float_or_null>, "material": "<material>", "lining": "<lining>"},
+  ...
+]
+
+One dict per line item. Ignore quantity entirely.
+
+## nb_1 and nb_2 rules
+
+NB/DN mapping (input → output integer):
+  DN25 / 25NB / 1" NB   →  25
+  DN40 / 40NB / 1.5" NB →  40
+  DN50 / 50NB / 2" NB   →  50
+  DN80 / 80NB / 3" NB   →  80
+  DN100 / 100NB / 4" NB → 100
+  DN150 / 150NB / 6" NB → 150
+  DN200 / 200NB / 8" NB → 200
+  DN250 / 250NB / 10" NB→ 250
+  DN300 / 300NB / 12" NB→ 300
+
+Fittings (bend, tee, blind, valve, strainer, etc.):
+  - Single NB given (e.g. "150NB 90° bend"):           nb_1 = 150,  nb_2 = 150   ← always equal for fittings
+  - Two NBs, NB at end   (e.g. "150x100NB reducer"):   nb_1 = larger, nb_2 = smaller
+  - Two NBs, NB on each  (e.g. "150NB x 100NB"):       nb_1 = larger, nb_2 = smaller
+  - Two NBs, no separator (e.g. "150NB 100NB"):         nb_1 = larger, nb_2 = smaller
+  - length_mm = null
+
+Pipes / spools:
+  - nb_1 = NB, nb_2 = null
+  - length_mm = length as a float (in mm)
+
+## desc mapping rules
+Same as for US inquiries. Map every description to a snake_case fitting type string.
+
+| desc value            | Recognise these (and similar)                             |
+|-----------------------|-----------------------------------------------------------|
+| "spool"               | pipe spool, spool, pipe cut to length, CS pipe, SS pipe   |
+| "bend_90"             | 90 ELL, ELL 90, 90 DEG bend/elbow, 90° bend, LR bend     |
+| "bend_45"             | 45 ELL, ELL 45, 45 DEG bend/elbow, 45° bend               |
+| "blind"               | blind flange, BLD FLG, FLG BLD                            |
+| "reducing_flange"     | reducing flange, RED. FLG, RED FLG                        |
+| "instrument_tee"      | instrument tee, INSTR TEE                                 |
+| "tee"                 | reducing tee, equal tee, TEE                              |
+| "concentric_reducer"  | concentric reducer, CONC RED                              |
+| "eccentric_reducer"   | eccentric reducer, ECC RED                                |
+| "hose_pipe"           | hose pipe, flexible hose                                  |
+| "ball_valve"          | ball valve                                                |
+| "ball_check_valve"    | ball check valve                                          |
+| "swing_check_valve"   | check valve, NRV, non-return valve, swing check           |
+| "butterfly_valve"     | butterfly valve, BFV                                      |
+| "strainer_y"          | wye strainer, Y strainer                                  |
+| "strainer_bucket"     | bucket strainer, basket strainer                          |
+| "plug_valve"          | plug valve                                                |
+| "spacer"              | spacer, solid spacer, ring spacer                         |
+| "unknown"             | only if you truly cannot identify the fitting type        |
+
+## material rules
+| material value | Recognise these                                              |
+|----------------|--------------------------------------------------------------|
+| "CS"           | CS, carbon steel, mild steel, or nothing specified           |
+| "SS304"        | SS304, 304SS, 304, 304L, stainless (no grade)                |
+| "SS316"        | SS316, 316SS, 316, 316L                                      |
+| null           | spacers and any purely non-metal item (PTFE/PFA)             |
+Default: "CS". hose_pipe defaults to "SS304".
+
+## lining rules
+| lining value | Recognise these                        |
+|--------------|----------------------------------------|
+| "PTFE"       | PTFE, teflon, or nothing specified     |
+| "PFA"        | PFA                                    |
+Default: "PTFE".
+
+## Special handling
+DITTO: same item type as the previous non-DITTO line item. Use the NB from the DITTO line.
+Ignore: quantity numbers, header rows, column labels, page numbers, totals.
+
+## Examples
+
+Input:
+  2 – 150NB, 90° LR BEND, CS, PTFE LINED
+  4 – 150NB EQUAL TEE, CS, PTFE LINED
+  1 – 150x100NB CONC REDUCER, CS, PTFE LINED
+  3 – 150NB x 3250mm SPOOL, CS, PTFE LINED
+
+Output:
+  [
+    {"desc": "bend_90",            "nb_1": 150, "nb_2": 150, "length_mm": null, "material": "CS", "lining": "PTFE"},
+    {"desc": "tee",                "nb_1": 150, "nb_2": 150, "length_mm": null, "material": "CS", "lining": "PTFE"},
+    {"desc": "concentric_reducer", "nb_1": 150, "nb_2": 100, "length_mm": null, "material": "CS", "lining": "PTFE"},
+    {"desc": "spool",              "nb_1": 150, "nb_2": null, "length_mm": 3250.0, "material": "CS", "lining": "PTFE"}
+  ]
+"""
+
+
+# -----------------------------------------------------------------------
+# NON-US TEXT → ITEMS
+# -----------------------------------------------------------------------
+
+def parse_inquiry_text_non_us(raw_text: str) -> list[dict]:
+    """
+    Parse a non-US RFQ where sizes are already NB/DN integers and lengths in mm.
+    Returns items in the format expected by build_structured_items() —
+    i.e. with 'description' key (not 'desc'), and nb_1/nb_2/length_mm directly.
+    """
+    response = _client.models.generate_content(
+        model=MODEL_NAME,
+        contents=raw_text,
+        config=types.GenerateContentConfig(
+            system_instruction=_SYSTEM_PROMPT_NON_US,
+            response_mime_type="application/json",
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
+        ),
+    )
+
+    text = response.text.strip()
+    start = text.find("[")
+    end = text.rfind("]") + 1
+    if start == -1 or end == 0:
+        raise ValueError(f"LLM returned no JSON array.\nResponse was:\n{text}")
+
+    raw_items = json.loads(text[start:end])
+
+    return [
+        {
+            "description": item["desc"],
+            "nb_1": item.get("nb_1"),
+            "nb_2": item.get("nb_2"),
+            "length_mm": item.get("length_mm"),
+            "material": item.get("material"),
+            "lining": item.get("lining") or "PTFE",
+        }
+        for item in raw_items
+    ]
+
+
+# -----------------------------------------------------------------------
+# AUTO-DETECTION
+# -----------------------------------------------------------------------
+
+_NON_US_PATTERN = _re.compile(
+    r'\bDN\d+\b'                        # DN150, DN50
+    r'|\b\d+\s*NB\b'                    # 150NB, 25 NB
+    r'|\bNB\s*\d+\b'                    # NB150
+    r'|\b\d+\s*mm\b'                    # 3250mm, 500 mm
+    r'|\bmm\b',                         # standalone "mm"
+    _re.IGNORECASE
+)
+
+_US_PATTERN = _re.compile(
+    r'\d+"\s*[xX×]'                     # 6" x, 6"x
+    r'|\d+\'-'                          # 10'-7"
+    r"|\d+'"                            # 10'
+    r'|\b\d+\s*/\s*\d+\b',             # fractions 1/8, 3/4
+)
+
+
+def detect_inquiry_standard(raw_text: str) -> str:
+    """
+    Heuristic detection: returns 'us' or 'non_us'.
+    No LLM call — purely regex-based.
+    Defaults to 'us' on a tie or when no signal is found.
+    """
+    non_us_hits = len(_NON_US_PATTERN.findall(raw_text))
+    us_hits = len(_US_PATTERN.findall(raw_text))
+    return "non_us" if non_us_hits > us_hits else "us"
+
+
+def parse_inquiry_auto(raw_text: str) -> tuple[list[dict], str]:
+    """
+    Detect standard and parse accordingly.
+    Returns (items, standard) where standard is 'us' or 'non_us'.
+    """
+    standard = detect_inquiry_standard(raw_text)
+    if standard == "non_us":
+        items = parse_inquiry_text_non_us(raw_text)
+    else:
+        items = parse_inquiry_text(raw_text)
+    return items, standard
+
+
+def parse_inquiry_file_auto(file_path: str) -> tuple[list[dict], str]:
+    """
+    Extract text from file, then detect standard and parse.
+    Returns (items, standard) where standard is 'us' or 'non_us'.
+    """
+    raw_text = _extract_text(file_path)
+    return parse_inquiry_auto(raw_text)
+
+
+# -----------------------------------------------------------------------
+# FILE TEXT EXTRACTION
+# -----------------------------------------------------------------------
 
 def _extract_text(file_path: str) -> str:
     """

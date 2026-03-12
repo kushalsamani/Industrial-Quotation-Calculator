@@ -66,7 +66,7 @@ def _load_model(
     )
 
     if not model_file.exists():
-        raise FileNotFoundError(f"No trained model found for"
+        raise FileNotFoundError(f"No trained model found for "
         f"{item_type=}, {base_material=}, {lining=}, {condition=}, {nb=}"
         )
 
