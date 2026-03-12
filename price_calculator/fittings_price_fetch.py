@@ -19,46 +19,53 @@ FITTINGS_MASTER_CSV = BASE_DIR / "data" / "fittings_master.csv"
 # Data loading utilities
 # ---------------------------------------------------------------------
 
+# Module-level cache: holds the DataFrame and the file's last-modified
+# timestamp at the time it was loaded. Reloads automatically if the
+# CSV file is saved/updated between calls.
+_fittings_df: pd.DataFrame | None = None
+_fittings_mtime: float | None = None
+
+
 def load_fittings_master() -> pd.DataFrame:
     """
     Load the master fittings price list from CSV into a pandas DataFrame.
 
-    This function:
-    - Reads the fittings_master.csv file
-    - Performs basic validation
-    - Returns a DataFrame ready for lookup operations
+    Caches the result in memory. On every call, checks the file's
+    last-modified timestamp — reloads only if the file has changed
+    since the last load. Safe for long-running processes (notebooks,
+    API servers) where the CSV may be updated mid-session.
 
     Returns
     -------
     pandas.DataFrame
         A DataFrame containing all fittings base prices with columns:
-        - item_type
-        - base_material
-        - lining
-        - fitting_type
-        - nb_1
-        - nb_2
-        - angle
-        - price_inr
+        item_type, base_material, lining, fitting_type, nb_1, nb_2,
+        angle, price_inr.
 
     Raises
     ------
     FileNotFoundError
-        If the fittings_master.csv file is not found in the project directory.
+        If fittings_master.csv is not found.
     ValueError
         If the CSV file is empty.
     """
+    global _fittings_df, _fittings_mtime
+
     if not FITTINGS_MASTER_CSV.exists():
         raise FileNotFoundError(
             f"Fittings master file not found at: {FITTINGS_MASTER_CSV}"
         )
 
-    df = pd.read_csv(FITTINGS_MASTER_CSV)
+    current_mtime = FITTINGS_MASTER_CSV.stat().st_mtime
 
-    if df.empty:
-        raise ValueError("Fittings master CSV is empty.")
+    if _fittings_df is None or current_mtime != _fittings_mtime:
+        df = pd.read_csv(FITTINGS_MASTER_CSV)
+        if df.empty:
+            raise ValueError("Fittings master CSV is empty.")
+        _fittings_df = df
+        _fittings_mtime = current_mtime
 
-    return df
+    return _fittings_df
 
 
 def fetch_fitting_price( # type: ignore
