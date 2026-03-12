@@ -17,10 +17,6 @@ Usage
     # From a file (PDF / Excel / CSV / image)
     items = parse_inquiry_file("inquiry.pdf")
     df = run_pricing_pipeline_us(items)
-
-    # Keep qty as a field instead of expanding
-    items = parse_inquiry_text(raw_text, expand_qty=False)
-    # → [{"desc": ..., "size": ..., "qty": N}, ...]
 """
 
 import os
@@ -80,7 +76,7 @@ plant RFQs. Abbreviations like "ELL" = elbow, "RED" = reducer, "FLG" = flange,
 | "blind"               | blind flange, BLD FLG, FLG BLD, FLANGE BLD, BLD. FLG     |
 | "reducing_flange"     | reducing flange, RED. FLG, FLG RED., RED FLG              |
 | "instrument_tee"      | instrument tee, INSTR. TEE, INSTR TEE                     |
-| "tee"                 | reducing tee, TEE RED, RED TEE, equal tee, TEE            |
+| "tee"                 | reducing tee, equal tee, TEE RED, RED TEE, TEE — ALWAYS "tee", NEVER "reducing_tee" or "equal_tee" |
 | "concentric_reducer"  | concentric reducer, CONC. RED, CONC RED                   |
 | "eccentric_reducer"   | eccentric reducer, ECC. RED, ECC RED                      |
 | "hose_pipe"           | hose pipe, flexible hose, rubber hose                     |
@@ -330,7 +326,7 @@ Same as for US inquiries. Map every description to a snake_case fitting type str
 | "blind"               | blind flange, BLD FLG, FLG BLD                            |
 | "reducing_flange"     | reducing flange, RED. FLG, RED FLG                        |
 | "instrument_tee"      | instrument tee, INSTR TEE                                 |
-| "tee"                 | reducing tee, equal tee, TEE                              |
+| "tee"                 | reducing tee, equal tee, TEE — ALWAYS "tee", NEVER "reducing_tee" or "equal_tee" |
 | "concentric_reducer"  | concentric reducer, CONC RED                              |
 | "eccentric_reducer"   | eccentric reducer, ECC RED                                |
 | "hose_pipe"           | hose pipe, flexible hose                                  |

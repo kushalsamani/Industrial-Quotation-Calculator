@@ -12,6 +12,56 @@ from fittings_price_fetch import load_fittings_master, fetch_fitting_price
 from pipe_price_calculation import pipe_pricing_mm  
 
 
+def _price_pipe_item(item: dict, item_type: str) -> dict:  # type: ignore[type-arg]
+    """
+    Price a single pipe or hose_pipe item. Returns one result dict.
+    item_type must be 'pipe' or 'hose_pipe'.
+    """
+    input_index = item["input_index"]
+    try:
+        if not item.get("base_material") or not item.get("lining"):
+            raise ValueError(f"Missing base_material or lining for {item_type} at index {input_index}")
+
+        df = pipe_pricing_mm(
+            item_type=item_type,
+            nb_list=[item["nb_1"]],
+            length_list=[item["length_mm"]],
+            base_material=item["base_material"],
+            lining=item["lining"],
+            condition=item["condition"]
+        )
+        row = df.iloc[0]
+        return {
+            "input_index": input_index,
+            "base_material": item.get("base_material"),
+            "size_us": item.get("size_us"),
+            "item_type": item_type,
+            "fitting_type": None,
+            "condition": item["condition"],
+            "lining": item["lining"],
+            "nb_1": row["nb"],
+            "nb_2": None,
+            "length_mm": row["length_mm"],
+            "final_price": row["price_inr"],
+            "status": row["status"]
+        }
+    except Exception:
+        return {
+            "input_index": input_index,
+            "size_us": item.get("size_us"),
+            "base_material": item.get("base_material"),
+            "item_type": item_type,
+            "fitting_type": None,
+            "condition": item["condition"],
+            "lining": item.get("lining"),
+            "nb_1": item.get("nb_1"),
+            "nb_2": None,
+            "length_mm": item.get("length_mm"),
+            "final_price": None,
+            "status": "error"
+        }
+
+
 def route_and_price_items(structured_items: list[dict]) -> pd.DataFrame:
     """
     Route structured inquiry items to pricing engines.
@@ -35,105 +85,10 @@ def route_and_price_items(structured_items: list[dict]) -> pd.DataFrame:
         item_type = item["item_type"]
 
         # -------------------------------------------------
-        # PIPE ITEMS
+        # PIPE / HOSE PIPE ITEMS
         # -------------------------------------------------
-        if item_type == "pipe":
-            try:
-                if not item.get("base_material") or not item.get("lining"):
-                    raise ValueError(f"Missing base_material or lining for pipe at index {input_index}")
-
-                df = pipe_pricing_mm(
-                    item_type=item_type,
-                    nb_list=[item["nb_1"]],
-                    length_list=[item["length_mm"]],
-                    base_material=item["base_material"],
-                    lining=item["lining"],
-                    condition=item["condition"]
-                )
-
-                row = df.iloc[0]
-
-                results.append({
-                    "input_index": input_index,
-                    "base_material": item.get("base_material"),
-                    "size_us": item.get("size_us", None),
-                    "item_type": "pipe",
-                    "fitting_type": None,
-                    "condition": item["condition"],
-                    "lining": item["lining"],                   
-                    "nb_1": row["nb"],
-                    "nb_2": None,
-                    "length_mm": row["length_mm"],
-                    "final_price": row["price_inr"],
-                    "status": row["status"]
-                })
-
-            except Exception:
-                results.append({
-                    "input_index": input_index,
-                    "size_us": item.get("size_us", None),
-                    "base_material": item.get("base_material"),
-                    "item_type": "pipe",
-                    "fitting_type": None,
-                    "condition": item["condition"],
-                    "lining": item.get("lining"),
-                    "nb_1": item.get("nb_1"),
-                    "nb_2": None,
-                    "length_mm": item.get("length_mm"),
-                    "final_price": None,
-                    "status": "error"
-                })
-
-        # -------------------------------------------------
-        # Hose Pipe ITEMS
-        # -------------------------------------------------
-
-        elif item_type == "hose_pipe":
-            try:
-                if not item.get("base_material") or not item.get("lining"):
-                    raise ValueError(f"Missing base_material or lining for pipe at index {input_index}")
-
-                df = pipe_pricing_mm(
-                    item_type=item_type,
-                    nb_list=[item["nb_1"]],
-                    length_list=[item["length_mm"]],
-                    base_material=item["base_material"],
-                    lining=item["lining"],
-                    condition=item["condition"]
-                )
-
-                row = df.iloc[0]
-
-                results.append({
-                    "input_index": input_index,
-                    "base_material": item.get("base_material"),
-                    "size_us": item.get("size_us", None),
-                    "item_type": "hose_pipe",
-                    "fitting_type": None,
-                    "condition": item["condition"],
-                    "lining": item["lining"],                   
-                    "nb_1": row["nb"],
-                    "nb_2": None,
-                    "length_mm": row["length_mm"],
-                    "final_price": row["price_inr"],
-                    "status": row["status"]
-                })
-
-            except Exception:
-                results.append({
-                    "input_index": input_index,
-                    "size_us": item.get("size_us", None),
-                    "base_material": item.get("base_material"),
-                    "item_type": "hose_pipe",
-                    "fitting_type": None,
-                    "condition": item["condition"],
-                    "lining": item.get("lining"),
-                    "nb_1": item.get("nb_1"),
-                    "nb_2": None,
-                    "length_mm": item.get("length_mm"),
-                    "final_price": None,
-                    "status": "error"
-                })
+        if item_type in ("pipe", "hose_pipe"):
+            results.append(_price_pipe_item(item, item_type))
 
 
         # -------------------------------------------------
