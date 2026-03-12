@@ -60,27 +60,25 @@ Return ONLY a valid JSON array — no markdown fences, no explanation:
 One dict per line item. Ignore quantity entirely.
 
 ## desc mapping rules
-Map every description to exactly one of these strings:
+Map every description to exactly one of these strings (these are the exact values used by the pricing system):
 
 | desc value            | Recognise these (and similar)                             |
 |-----------------------|-----------------------------------------------------------|
 | "spool"               | pipe spool, spool, pipe cut to length, CS pipe, SS pipe   |
-| "90 elbow"            | 90 ELL, ELL 90, 90 DEG elbow, 90° elbow, 90 ELBOW        |
-| "45 elbow"            | 45 ELL, ELL 45, 45 DEG elbow, 45° elbow, 45 ELBOW        |
-| "blind flange"        | blind flange, BLD FLG, FLG BLD, FLANGE BLD, BLD. FLG     |
-| "reducing flange"     | reducing flange, RED. FLG, FLG RED., RED FLG              |
-| "instrument tee"      | instrument tee, INSTR. TEE, INSTR TEE                     |
-| "reducing tee"        | reducing tee, TEE RED, RED TEE  (two different NBs)       |
-| "equal tee"           | equal tee, TEE  (same NB on all ends)                     |
-| "concentric reducer"  | concentric reducer, CONC. RED, CONC RED                   |
-| "eccentric reducer"   | eccentric reducer, ECC. RED, ECC RED                      |
+| "bend_90"             | 90 ELL, ELL 90, 90 DEG elbow, 90° elbow, 90 ELBOW        |
+| "bend_45"             | 45 ELL, ELL 45, 45 DEG elbow, 45° elbow, 45 ELBOW        |
+| "blind"               | blind flange, BLD FLG, FLG BLD, FLANGE BLD, BLD. FLG     |
+| "reducing_flange"     | reducing flange, RED. FLG, FLG RED., RED FLG              |
+| "instrument_tee"      | instrument tee, INSTR. TEE, INSTR TEE                     |
+| "tee"                 | reducing tee, TEE RED, RED TEE, equal tee, TEE            |
+| "concentric_reducer"  | concentric reducer, CONC. RED, CONC RED                   |
 | "hose_pipe"           | hose pipe, flexible hose, rubber hose                     |
-| "spacer"              | spacer, solid spacer, ring spacer, spacer ring            |
-| "plug valve"          | plug valve                                                |
-| "ball valve"          | ball valve                                                |
-| "check valve"         | check valve, NRV, non-return valve                        |
-| "butterfly valve"     | butterfly valve, BFV                                      |
-| "wye strainer"        | wye strainer, Y strainer, WY strainer                     |
+| "ball_valve"          | ball valve                                                |
+| "ball_check_valve"    | ball check valve                                          |
+| "swing_check_valve"   | check valve, NRV, non-return valve, swing check           |
+| "butterfly_valve"     | butterfly valve, BFV                                      |
+| "strainer_y"          | wye strainer, Y strainer, WY strainer                     |
+| "strainer_bucket"     | bucket strainer, basket strainer                          |
 | "unknown"             | anything you cannot confidently classify                  |
 
 ## size string rules
@@ -117,15 +115,15 @@ Ignore: quantity numbers, "N ea", "N nos", "N pcs", "N –", header rows,
 ## Examples
 
 Input:
-  9 – 1" PLUG VALVE, 150LB, TEFLON LINED
+  9 – 1" SWING CHECK VALVE, 150LB, TEFLON LINED
   2 – 2" DITTO
   1 – 4" TEFLON LINED WYE STRAINER, 150LB RF
 
 Output:
   [
-    {"desc": "plug valve",   "size": "1\" x 1\""},
-    {"desc": "plug valve",   "size": "2\" x 2\""},
-    {"desc": "wye strainer", "size": "4\" x 4\""}
+    {"desc": "swing_check_valve", "size": "1\" x 1\""},
+    {"desc": "swing_check_valve", "size": "2\" x 2\""},
+    {"desc": "strainer_y",        "size": "4\" x 4\""}
   ]
 
 Input (table copied from email, columns separated by newlines):
@@ -137,10 +135,10 @@ Input (table copied from email, columns separated by newlines):
 
 Output:
   [
-    {"desc": "90 elbow",           "size": "8\" x 8\""},
-    {"desc": "concentric reducer", "size": "8\" x 6\""},
+    {"desc": "bend_90",            "size": "8\" x 8\""},
+    {"desc": "concentric_reducer", "size": "8\" x 6\""},
     {"desc": "spool",              "size": "3\" x 12'-7\""},
-    {"desc": "reducing flange",    "size": "2\" x 1\""}
+    {"desc": "reducing_flange",    "size": "2\" x 1\""}
   ]
 """
 
@@ -170,6 +168,7 @@ def parse_inquiry_text(raw_text: str) -> list[dict]:
         config=types.GenerateContentConfig(
             system_instruction=_SYSTEM_PROMPT,
             response_mime_type="application/json",
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
         ),
     )
 

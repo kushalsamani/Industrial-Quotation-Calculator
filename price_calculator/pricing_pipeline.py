@@ -84,53 +84,14 @@ def build_structured_items(parsed_results):
     return pd.DataFrame(structured_items)
 
 
-def apply_elbow_angles(df):
+def parse_fitting_type_and_angle(df):
     df["angle"] = None
 
-    mask_90 = df["fitting_type"].str.contains(
-        "90 elbow", case=False, na=False
-    )
+    mask_90 = df["fitting_type"] == "bend_90"
+    mask_45 = df["fitting_type"] == "bend_45"
     df.loc[mask_90, "angle"] = 90
-
-    mask_45 = df["fitting_type"].str.contains(
-        "45 elbow", case=False, na=False
-    )
     df.loc[mask_45, "angle"] = 45
-
-    return df
-
-
-def normalize_fitting_types(df):
-    df["fitting_type"] = df["fitting_type"].replace(
-        to_replace=r"(?i)^(90|45)\s*elbow$",
-        value="bend",
-        regex=True
-    )
-
-    fitting_type_map = {
-        "blind flange": "blind",
-        "conc. reducer": "concentric_reducer",
-        "conc reducer": "concentric_reducer",
-        "concentric reducer": "concentric_reducer",
-        "instrument tee": "instrument_tee",
-        "eccentric reducer": "eccentric_reducer",
-        "reducing tee": "tee",
-        "spool": "pipe",
-        "pipe": "pipe",
-        "equal tee": "tee",
-        "hose_pipe": "hose_pipe",
-        "Hose": "hose_pipe",
-    }
-
-    df["fitting_type"] = (
-        df["fitting_type"]
-        .str.lower()
-        .replace(fitting_type_map)
-    )
-
-    pipe_mask = df["fitting_type"] == "pipe" 
-    df.loc[pipe_mask, "item_type"] = "pipe"
-    df.loc[pipe_mask, "fitting_type"] = None
+    df.loc[mask_90 | mask_45, "fitting_type"] = "bend"
 
     return df
 
@@ -151,16 +112,14 @@ def prepare_for_router(df):
 def run_pricing_pipeline_us(items):
     parsed_results = parse_items(items)
     df = build_structured_items(parsed_results)
-    df = apply_elbow_angles(df)
-    df = normalize_fitting_types(df)
+    df = parse_fitting_type_and_angle(df)
     structured_items = prepare_for_router(df)
 
     return route_and_price_items(structured_items)
 
 def run_pricing_pipeline_non_us(items):
     df = build_structured_items(items)
-    df = apply_elbow_angles(df)
-    df = normalize_fitting_types(df)
+    df = parse_fitting_type_and_angle(df)
     structured_items = prepare_for_router(df)
 
     return route_and_price_items(structured_items)
