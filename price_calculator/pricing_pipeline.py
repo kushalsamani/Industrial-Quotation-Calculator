@@ -27,12 +27,16 @@ def parse_items(items):
 
             parsed_results.append({
                 "description": item["desc"],
+                "material": item.get("material"),
+                "lining": item.get("lining") or "PTFE",
                 **parsed
             })
 
         except Exception as e:
             parsed_results.append({
                 "description": item["desc"],
+                "material": item.get("material"),
+                "lining": item.get("lining") or "PTFE",
                 "size_us": item["size"],
                 "error": str(e)
             })
@@ -55,6 +59,11 @@ def build_structured_items(parsed_results):
         else:
             item_type = "fitting"
 
+        # material: use what LLM extracted; fall back to SS304 for hose_pipe, CS for everything else
+        material = item.get("material")
+        if not material:
+            material = "SS304" if item_type == "hose_pipe" else "CS"
+
         base_entry = {
             "input_index": idx,
             "item_type": item_type,
@@ -63,14 +72,10 @@ def build_structured_items(parsed_results):
             "nb_2": item.get("nb_2"),
             "condition": "non_vacuum",
             "length_mm": item.get("length_mm"),
-            "lining": "PTFE",
+            "lining": item.get("lining") or "PTFE",
+            "base_material": material,
             "error": item.get("error")
         }
-
-        if item_type == "hose_pipe":
-            base_entry["base_material"] = "SS304"
-        else:
-            base_entry["base_material"] = "CS"
 
 
 

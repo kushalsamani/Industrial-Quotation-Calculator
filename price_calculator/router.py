@@ -159,7 +159,7 @@ def route_and_price_items(structured_items: list[dict]) -> pd.DataFrame:
                     "fitting_type": (f"{result['fitting_type']}_{item['angle']}" 
                                      if item.get("angle") is not None else result["fitting_type"]),
                     "condition": None,
-                    "lining": result["lining_quoted"],
+                    "lining": result["lining_quoted"] or result["lining_requested"],
                     "nb_1": result["nb_1"],
                     "nb_2": result["nb_2"],
                     "length_mm": None,                                                           
@@ -173,10 +173,9 @@ def route_and_price_items(structured_items: list[dict]) -> pd.DataFrame:
                     "size_us": item.get("size_us", None),
                     "base_material": item.get("base_material"),
                     "item_type": "fitting",
-                    "fitting_type": (f"{result['fitting_type']}_{item['angle']}" 
-                                     if item.get("angle") is not None else result["fitting_type"]),
+                    "fitting_type": item.get("fitting_type"),
                     "condition": None,
-                    "lining": None,
+                    "lining": item.get("lining"),
                     "nb_1": item.get("nb_1"),
                     "nb_2": item.get("nb_2"),
                     "length_mm": None,
@@ -210,75 +209,4 @@ def route_and_price_items(structured_items: list[dict]) -> pd.DataFrame:
     return df_final
 
 
-# if __name__ == "__main__":
-
-#     structured_items = [
-    # 0 - Pipe
-#     {
-#         "input_index": 0,
-#         "size_us": "6\" × 1'-4" ,
-#         "item_type": "pipe",
-#         "base_material": "CS",
-#         "lining": "PTFE",
-#         "condition": "non_vacuum",
-#         "nb_1": 150,
-#         "length_mm": 406.4
-#     },
-
-#     {
-#         "input_index": 1,
-#         "size_us": "4\" × 2'-2 1/8" ,
-#         "item_type": "pipe",
-#         "base_material": "CS",
-#         "lining": "PTFE",
-#         "condition": "non_vacuum",
-#         "nb_1": 100,
-#         "length_mm": 663.575
-#     },
-
-#     {
-#         "input_index": 2,
-#         "size_us": "4\" × 2'-0" ,
-#         "item_type": "pipe",
-#         "base_material": "CS",
-#         "lining": "PTFE",
-#         "condition": "non_vacuum",
-#         "nb_1": 100,
-#         "length_mm": 609.6
-#     },
-    
-#     {
-#         "input_index": 3,
-#         "size_us": "4\" × 1'-11 3/4" ,
-#         "item_type": "pipe",
-#         "base_material": "CS",
-#         "lining": "PTFE",
-#         "condition": "non_vacuum",
-#         "nb_1": 100,
-#         "length_mm": 603.25
-#     },
-#     {
-#         "input_index": 4,
-#         "size_us": "4\" × 1'-0 1/4" ,
-#         "item_type": "pipe",
-#         "base_material": "CS",
-#         "lining": "PTFE",
-#         "condition": "non_vacuum",
-#         "nb_1": 100,
-#         "length_mm": 311.15
-#     },
-#     {
-#         "input_index": 5,
-#         "size_us": "4\" × 6 1/4\"" ,
-#         "item_type": "pipe",
-#         "base_material": "CS",
-#         "lining": "PTFE",
-#         "condition": "non_vacuum",
-#         "nb_1": 100,
-#         "length_mm": 158.75
-#     }
-# ]
-
-# df = route_and_price_items(structured_items)
-# df
 
