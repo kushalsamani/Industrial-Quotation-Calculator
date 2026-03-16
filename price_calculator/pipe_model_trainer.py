@@ -112,21 +112,21 @@ def _compute_fingerprint(df: pd.DataFrame) -> str:
     """
     Compute a deterministic fingerprint for a model's training data.
 
-    The fingerprint is based on ALL (length_mm, price_inr) pairs.
+    The fingerprint is based on ALL (length_mm, price_usd) pairs.
     Order does not matter.
 
     Parameters
     ----------
     df : pd.DataFrame
-        DataFrame containing length_mm and price_inr
+        DataFrame containing length_mm and price_usd
 
     Returns
     -------
     str
         SHA256 fingerprint
     """
-    df_sorted = df[["length_mm", "price_inr"]].sort_values(
-        by=["length_mm", "price_inr"]
+    df_sorted = df[["length_mm", "price_usd"]].sort_values(
+        by=["length_mm", "price_usd"]
     ).reset_index(drop=True)
 
     raw_bytes = df_sorted.to_csv(index=False).encode("utf-8")
@@ -185,7 +185,7 @@ def sync_pipe_models() -> None:
         "condition",
         "nb",
         "length_mm",
-        "price_inr",
+        "price_usd",
     }
     if not required_cols.issubset(df.columns):
         raise ValueError("pipes_master.csv schema is invalid")
@@ -213,7 +213,7 @@ def sync_pipe_models() -> None:
 
         # Train or retrain
         X = group_df[["length_mm"]].values
-        y = group_df["price_inr"].values
+        y = group_df["price_usd"].values
 
         if len(group_df) < 2:
             logging.warning(

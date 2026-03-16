@@ -2,11 +2,6 @@
 .env
 .env.*
 
-# Data, metadata, logs, models
-data/
-metadata/
-logs/
-models/
 
 # Jupyter notebooks
 *.ipynb

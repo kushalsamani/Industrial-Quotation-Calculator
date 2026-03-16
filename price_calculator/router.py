@@ -42,7 +42,7 @@ def _price_pipe_item(item: dict, item_type: str) -> dict:  # type: ignore[type-a
             "nb_1": row["nb"],
             "nb_2": None,
             "length_mm": row["length_mm"],
-            "final_price": row["price_inr"],
+            "final_price": row["price_usd"],
             "status": row["status"]
         }
     except Exception:

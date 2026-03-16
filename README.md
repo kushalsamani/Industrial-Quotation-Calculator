@@ -4,7 +4,9 @@ An AI-powered system that reads raw piping material inquiries (RFQs) — from PD
 
 Built for **PTFE/PFA-lined industrial pipe fittings and pipe spools** commonly found in chemical plant procurement.
 
-> **Note on data files:** The CSV files in this repository (`fittings_master.csv`, `pipes_master.csv`) contain **placeholder prices** for demonstration purposes. The real pricing data is not included. You should replace these with your own pricing before use.
+> **Disclaimer on pricing data:** All prices in this program and in the accompanying CSV files (`fittings_master.csv`, `pipes_master.csv`) are **entirely fictitious and made up**. They are intentionally unreasonable and bear no resemblance to real market prices. This has been done deliberately to avoid disclosing any confidential or proprietary information. The focus of this project is the **software architecture and processing pipeline** — not the numbers. Nothing in this repository should be interpreted as, or used as, an official or indicative quotation price.
+>
+> **To use with real prices:** The CSV files are included so that you can substitute your own prices in the `price_usd` column. Keep the rest of the file format (column names, structure) exactly as-is — this ensures the program works without any code changes.
 
 ---
 
@@ -66,7 +68,7 @@ price_calculator/
 
 ### Install dependencies
 
-```bash
+```powershell
 pip install -r requirements.txt
 ```
 
@@ -80,13 +82,15 @@ GEMINI_API_KEY=your_key_here
 
 ### Train pipe pricing models
 
-Pipe models must be trained before first use. Run once (and re-run whenever `pipes_master.csv` changes):
+**This must be done before running the program for the first time.** Run the following command from the project root in PowerShell:
 
-```bash
+```powershell
 python price_calculator/pipe_model_trainer.py
 ```
 
-This reads `data/pipes_master.csv` and creates one `.joblib` model per unique `(item_type, base_material, lining, condition, nb)` combination. Models are only retrained if the underlying data has changed.
+This reads `pipes_master.csv` and trains one linear regression model per unique `(item_type, base_material, lining, condition, nb)` combination. Trained models are saved as `.joblib` files under `price_calculator/models/`.
+
+**You only need to re-run this command if `pipes_master.csv` has been updated.** The trainer uses SHA-256 fingerprinting to detect which model groups have changed — only those are retrained. Model groups whose data is unchanged are skipped entirely.
 
 ---
 
@@ -96,11 +100,17 @@ Run all commands from the **project root**.
 
 ### Price an inquiry file
 
-```bash
-python price_calculator/main.py "your_inquiry_file_path"
+```powershell
+python price_calculator/main.py "path/to/your/inquiry_file"
 ```
 
 Supported file types: `.pdf`, `.xlsx`, `.xls`, `.csv`, `.txt`, `.png`, `.jpg`, `.jpeg`
+
+A sample inquiry is provided in the `sample_inquiry/` folder (project root) for testing. To try it out, run:
+
+```powershell
+python price_calculator/main.py "sample_inquiry/sample_inquiry_us.xlsx"
+```
 
 After results are printed, the program will prompt:
 ```
@@ -112,17 +122,25 @@ Press **Enter** to skip, or type a path to save the output as CSV.
 
 To skip the prompt and save directly, pass the output path with `-o`:
 
-```bash
+```powershell
 python price_calculator/main.py "your_inquiry_file_path" -o "file_path_where_you_want_to_save/results.csv"
 ```
 
 ### Paste inquiry text interactively
 
-```bash
+```powershell
 python price_calculator/main.py
 ```
 
 Paste your RFQ text, then press **Enter twice** to submit.
+
+To save results directly without being prompted, add `-o`:
+
+```powershell
+python price_calculator/main.py -o "path/to/save/results.csv"
+```
+
+Paste your text and press **Enter twice** — results will be saved automatically to the path provided.
 
 ---
 
@@ -166,16 +184,16 @@ Linings supported: `PTFE`, `PFA`
 | `base_material` | `CS`, `SS304`, or `SS316` |
 | `lining` | `PTFE` or `PFA` |
 | `condition` | `non_vacuum` or `full_vacuum` (pipes/hose pipes only) |
-| `final_price` | Price in INR (null if not found) |
+| `final_price` | Price in USD (null if not found) |
 | `status` | `exact_match`, `fallback_applied`, `not_found`, or `error` |
 
 ---
 
 ## Retraining pipe models
 
-Update `data/pipes_master.csv` with new price data, then run:
+Update `data/pipes_master.csv` with new price data, then run from the project root:
 
-```bash
+```powershell
 python price_calculator/pipe_model_trainer.py
 ```
 

@@ -40,7 +40,7 @@ def load_fittings_master() -> pd.DataFrame:
     pandas.DataFrame
         A DataFrame containing all fittings base prices with columns:
         item_type, base_material, lining, fitting_type, nb_1, nb_2,
-        angle, price_inr.
+        angle, price_usd.
 
     Raises
     ------
@@ -62,6 +62,10 @@ def load_fittings_master() -> pd.DataFrame:
         df = pd.read_csv(FITTINGS_MASTER_CSV)
         if df.empty:
             raise ValueError("Fittings master CSV is empty.")
+        df["nb_1"] = pd.to_numeric(df["nb_1"], errors="coerce")
+        df["nb_2"] = pd.to_numeric(df["nb_2"], errors="coerce")
+        df["angle"] = pd.to_numeric(df["angle"], errors="coerce")
+        df["price_usd"] = pd.to_numeric(df["price_usd"], errors="coerce")
         _fittings_df = df
         _fittings_mtime = current_mtime
 
@@ -176,7 +180,7 @@ def fetch_fitting_price( # type: ignore
             "nb_1": nb_1,
             "nb_2": nb_2,
             "angle": angle,
-            "final_price": int(row["price_inr"]),
+            "final_price": int(row["price_usd"]),
             "status": "exact_match"
         } # type: ignore
 
@@ -208,7 +212,7 @@ def fetch_fitting_price( # type: ignore
                 "nb_1": nb_1,
                 "nb_2": nb_2,
                 "angle": angle,
-                "final_price": int(row["price_inr"]),
+                "final_price": int(row["price_usd"]),
                 "status": "fallback_applied"                
            } # type: ignore
 

@@ -102,7 +102,7 @@ def predict_price_mm(
     Returns
     -------
     float
-        Predicted price in INR
+        Predicted price in USD
     """
     model = _load_model(
         item_type, base_material, lining, condition, nb
@@ -152,7 +152,7 @@ def pipe_pricing_mm(
                 "nb": nb,
                 "length_mm": mm,
                 "condition_quoted": condition,
-                "price_inr": round(price, 2),
+                "price_usd": round(price, 2),
                 "status": "ok"
             })
 
@@ -161,7 +161,7 @@ def pipe_pricing_mm(
                 "nb": nb,
                 "length_mm": mm,
                 "condition_quoted": condition,
-                "price_inr": np.nan,
+                "price_usd": np.nan,
                 "status": "not_available",
             })
 

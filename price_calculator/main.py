@@ -20,15 +20,15 @@ def _read_pasted_text() -> str:
     lines = []
     blank_streak = 0
     try:
-        for line in sys.stdin:
-            line = line.rstrip("\n")
+        while True:
+            line = input()
             if line == "":
                 blank_streak += 1
                 if blank_streak >= 2:
                     break
             else:
                 blank_streak = 0
-            lines.append(line)
+                lines.append(line)
     except (EOFError, KeyboardInterrupt):
         pass
     return "\n".join(lines)
@@ -81,7 +81,15 @@ def main() -> None:
         df.to_csv(args.output, index=False)
         print(f"\nResults saved to: {args.output}")
     else:
-        save_path = input("\nSave results? Enter file path (or press Enter to skip): ").strip().strip('"').strip("'")
+        print("\nSave results? Enter file path (or press Enter to skip): ", end="", flush=True)
+        try:
+            # Read directly from the console device to avoid consuming
+            # any leftover newlines that pasted text left in stdin.
+            con = "CONIN$" if sys.platform == "win32" else "/dev/tty"
+            with open(con, "r") as _con:
+                save_path = _con.readline().rstrip("\n").strip().strip('"').strip("'")
+        except OSError:
+            save_path = input().strip().strip('"').strip("'")
         if save_path:
             df.to_csv(save_path, index=False)
             print(f"Results saved to: {save_path}")
