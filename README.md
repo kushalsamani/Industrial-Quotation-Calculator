@@ -1,4 +1,4 @@
-# Automated Industrial Quotation Calculator
+# Industrial Quotation Calculator
 
 An AI-powered system that reads raw piping material inquiries (RFQs) — from PDF, Excel, email text, or images — and automatically prices each line item against a known price database.
 
