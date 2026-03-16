@@ -11,7 +11,7 @@ Built for **PTFE/PFA-lined industrial pipe fittings and pipe spools** commonly f
 ## What it does
 
 1. **Reads the inquiry** — accepts PDF, Excel, CSV, plain text, or image files
-2. **Parses line items** — uses a Gemini LLM to extract item type, size, material, and lining from free-form RFQ text
+2. **Parses line items** — uses a Gemini LLM to extract item type, size, material, lining, and condition (vacuum / non-vacuum) from free-form RFQ text
 3. **Detects sizing standard** — automatically distinguishes US (inch/feet) from non-US (NB/DN + mm) inquiries
 4. **Prices each item**:
    - **Pipe fittings** — exact-match lookup against a master price CSV
@@ -92,32 +92,34 @@ This reads `data/pipes_master.csv` and creates one `.joblib` model per unique `(
 
 ## Usage
 
-Open a terminal in the `price_calculator/` directory first:
-
-```bash
-cd "path/to/project/price_calculator"
-```
+Run all commands from the **project root**.
 
 ### Price an inquiry file
 
 ```bash
-python main.py "your_inquiry_file_path"
+python price_calculator/main.py "your_inquiry_file_path"
 ```
 
 Supported file types: `.pdf`, `.xlsx`, `.xls`, `.csv`, `.txt`, `.png`, `.jpg`, `.jpeg`
 
-### Save results to CSV
+After results are printed, the program will prompt:
+```
+Save results? Enter file path (or press Enter to skip):
+```
+Press **Enter** to skip, or type a path to save the output as CSV.
 
-By default, results are only printed to the terminal. To save them, add the `-o` flag — it prices the inquiry and saves the results in one single command.
+### Save results upfront with `-o`
+
+To skip the prompt and save directly, pass the output path with `-o`:
 
 ```bash
-python main.py "your_inquiry_file_path" -o "where_you_want_to_save\results.csv"
+python price_calculator/main.py "your_inquiry_file_path" -o "file_path_where_you_want_to_save/results.csv"
 ```
 
 ### Paste inquiry text interactively
 
 ```bash
-python main.py
+python price_calculator/main.py
 ```
 
 Paste your RFQ text, then press **Enter twice** to submit.
@@ -163,6 +165,7 @@ Linings supported: `PTFE`, `PFA`
 | `length_mm` | Spool/hose length in mm (null for fittings) |
 | `base_material` | `CS`, `SS304`, or `SS316` |
 | `lining` | `PTFE` or `PFA` |
+| `condition` | `non_vacuum` or `full_vacuum` (pipes/hose pipes only) |
 | `final_price` | Price in INR (null if not found) |
 | `status` | `exact_match`, `fallback_applied`, `not_found`, or `error` |
 

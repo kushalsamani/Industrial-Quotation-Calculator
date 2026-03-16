@@ -48,6 +48,7 @@ def parse_items(items):
                 "description": item["desc"],
                 "material": item.get("material"),
                 "lining": item.get("lining") or "PTFE",
+                "condition": item.get("condition") or "non_vacuum",
                 **parsed
             })
 
@@ -56,6 +57,7 @@ def parse_items(items):
                 "description": item["desc"],
                 "material": item.get("material"),
                 "lining": item.get("lining") or "PTFE",
+                "condition": item.get("condition") or "non_vacuum",
                 "size_us": item["size"],
                 "error": str(e)
             })
@@ -101,7 +103,7 @@ def build_structured_items(parsed_results):
             "size_us": item.get("size_us"),
             "nb_1": item.get("nb_1"),
             "nb_2": item.get("nb_2"),
-            "condition": "non_vacuum",
+            "condition": item.get("condition") or "non_vacuum",
             "length_mm": item.get("length_mm"),
             "lining": item.get("lining") or "PTFE",
             "base_material": material,

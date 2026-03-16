@@ -80,6 +80,11 @@ def main() -> None:
     if args.output:
         df.to_csv(args.output, index=False)
         print(f"\nResults saved to: {args.output}")
+    else:
+        save_path = input("\nSave results? Enter file path (or press Enter to skip): ").strip().strip('"').strip("'")
+        if save_path:
+            df.to_csv(save_path, index=False)
+            print(f"Results saved to: {save_path}")
 
 
 if __name__ == "__main__":

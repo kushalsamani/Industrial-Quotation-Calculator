@@ -50,11 +50,22 @@ text into a structured JSON array for a pricing system.
 ## Output format
 Return ONLY a valid JSON array — no markdown fences, no explanation:
 [
-  {"desc": "<item_type>", "size": "<size_string>", "material": "<material>", "lining": "<lining>"},
+  {"desc": "<item_type>", "size": "<size_string>", "material": "<material>", "lining": "<lining>", "condition": "<condition>"},
   ...
 ]
 
 One dict per line item. Ignore quantity entirely.
+
+## condition rules
+
+Applies to spools and hose pipes only. Set to null for all fittings.
+
+| condition value | Recognise these                                              |
+|-----------------|--------------------------------------------------------------|
+| "full_vacuum"   | vacuum, full vacuum, vacuum service, vacuum rated            |
+| "non_vacuum"    | anything else, or nothing specified                          |
+
+Default: "non_vacuum".
 
 ## desc mapping rules
 Map every description to a snake_case fitting type string.
@@ -242,6 +253,7 @@ def parse_inquiry_text(raw_text: str) -> list[dict]:
             "size": item["size"],
             "material": item.get("material"),
             "lining": item.get("lining") or "PTFE",
+            "condition": item.get("condition") or "non_vacuum",
         }
         for item in raw_items
     ]
@@ -285,11 +297,22 @@ and lengths in mm. Do NOT convert — output the NB/DN values and mm lengths dir
 ## Output format
 Return ONLY a valid JSON array — no markdown fences, no explanation:
 [
-  {"desc": "<item_type>", "nb_1": <int>, "nb_2": <int_or_null>, "length_mm": <float_or_null>, "material": "<material>", "lining": "<lining>"},
+  {"desc": "<item_type>", "nb_1": <int>, "nb_2": <int_or_null>, "length_mm": <float_or_null>, "material": "<material>", "lining": "<lining>", "condition": "<condition>"},
   ...
 ]
 
 One dict per line item. Ignore quantity entirely.
+
+## condition rules
+
+Applies to spools and hose pipes only. Set to null for all fittings.
+
+| condition value | Recognise these                                              |
+|-----------------|--------------------------------------------------------------|
+| "full_vacuum"   | vacuum, full vacuum, vacuum service, vacuum rated            |
+| "non_vacuum"    | anything else, or nothing specified                          |
+
+Default: "non_vacuum".
 
 ## nb_1 and nb_2 rules
 
@@ -414,6 +437,7 @@ def parse_inquiry_text_non_us(raw_text: str) -> list[dict]:
             "length_mm": item.get("length_mm"),
             "material": item.get("material"),
             "lining": item.get("lining") or "PTFE",
+            "condition": item.get("condition") or "non_vacuum",
         }
         for item in raw_items
     ]
