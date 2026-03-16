@@ -73,13 +73,14 @@ def ft_in_to_mm(text: str) -> float:
 
 def inch_text_to_nb(text: str) -> int:
     """
-    Convert an inch size string like '6"' or '6' to NB.
+    Convert an inch size string like '6"', '1.5"', or '1 1/2"' to NB.
+    Handles both decimal and fractional formats.
     """
     clean = text.replace('"', '').strip()
 
     try:
-        inch_value = float(clean)
-    except ValueError:
+        inch_value = float(sum(Fraction(t) for t in clean.split()))
+    except (ValueError, ZeroDivisionError):
         raise ValueError(f"Invalid inch size: {text}")
 
     if inch_value not in INCH_TO_NB:
