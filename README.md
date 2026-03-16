@@ -66,7 +66,7 @@ price_calculator/
 - Python 3.10+
 - A [Google Gemini API key](https://aistudio.google.com/app/apikey)
 
-### Install dependencies
+### Install dependencies (powershell commands)
 
 ```powershell
 pip install -r requirements.txt
